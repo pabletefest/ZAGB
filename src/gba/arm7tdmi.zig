@@ -61,11 +61,11 @@ const ProgramStatusRegister = packed struct(u32) {
     },
 
     comptime {
-        std.debug.assert(@sizeOf(ProgramStatusRegister == @sizeOf(u32)));
+        std.debug.assert(@sizeOf(ProgramStatusRegister) == @sizeOf(u32));
     }
 };
 
-var CPU = struct {
+const CPU = struct {
     gpr: [16]u32,
     banked_regs: [7][7]u32, // we bank regs 8-14 included, to simplify the process
     cpsr: ProgramStatusRegister,
