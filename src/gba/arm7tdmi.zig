@@ -5,7 +5,19 @@ const CpuStateMode = enum(u1) {
     THUMB = 1,
 };
 
+const CPSRBitsMask = enum(u32) {
+    N = 0x80000000,
+    Z = 0x40000000,
+    C = 0x20000000,
+    V = 0x10000000,
+    I = 0x00000080,
+    F = 0x00000040,
+    T = 0x00000020,
+};
+
 const ProgramStatusRegister = packed struct(u32) {
+    const Self = @This();
+
     mode_bits: enum(u5) {
         old_user = 0,
         old_fiq = 1,
@@ -60,6 +72,26 @@ const ProgramStatusRegister = packed struct(u32) {
         signed = 1,
     },
 
+    fn getRegRaw(self: Self) u32 {
+        return @bitCast(self);
+    }
+
+    fn setRegRaw(self: *Self, value: u32) void {
+        self.* = @bitCast(value);
+    }
+
+    fn setBits(self: *Self, bits_mask: CPSRBitsMask) void {
+        self.setRegRaw(self.getRegRaw() | @intFromEnum(bits_mask));
+    }
+
+    fn clearBits(self: *Self, bits_mask: CPSRBitsMask) void {
+        self.setRegRaw(self.getRegRaw() & ~(@intFromEnum(bits_mask)));
+    }
+
+    fn isBitSet(self: Self, bits_mask: CPSRBitsMask) bool {
+        return (self.getRegRaw() & @intFromEnum(bits_mask)) > 0;
+    }
+
     comptime {
         std.debug.assert(@sizeOf(ProgramStatusRegister) == @sizeOf(u32));
     }
@@ -70,5 +102,43 @@ const CPU = struct {
     banked_regs: [7][7]u32, // we bank regs 8-14 included, to simplify the process
     cpsr: ProgramStatusRegister,
     spsr: [7]ProgramStatusRegister,
-    cpuState: CpuStateMode,
+    pipeline: [2]u32,
+
+    pub fn init() CPU {
+        return CPU{
+            .gpr = std.mem.zeroes([16]u32),
+            .banked_regs = std.mem.zeroes([7][7]u32),
+            .cpsr = std.mem.zeroes(ProgramStatusRegister),
+            .spsr = std.mem.zeroes([7]ProgramStatusRegister),
+            .pipeline = std.mem.zeroes([2]u32),
+        };
+    }
 };
+
+test "CPU init" {
+    var cpu = CPU.init();
+
+    try std.testing.expectEqual(cpu.cpsr.getRegRaw(), 0);
+
+    cpu.cpsr.setRegRaw(100);
+
+    try std.testing.expectEqual(cpu.cpsr.getRegRaw(), 100);
+
+    cpu.cpsr.mode_bits = @enumFromInt(19);
+
+    try std.testing.expectEqual(@intFromEnum(cpu.cpsr.mode_bits), 19);
+}
+
+test "CPSR bits funcs" {
+    var cpsr: ProgramStatusRegister = std.mem.zeroes(ProgramStatusRegister);
+
+    try std.testing.expectEqual(cpsr.isBitSet(CPSRBitsMask.T), false);
+
+    cpsr.setBits(CPSRBitsMask.T);
+
+    try std.testing.expectEqual(cpsr.isBitSet(CPSRBitsMask.T), true);
+
+    cpsr.clearBits(CPSRBitsMask.T);
+
+    try std.testing.expectEqual(cpsr.isBitSet(CPSRBitsMask.T), false);
+}
