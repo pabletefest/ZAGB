@@ -16,8 +16,6 @@ const CPSRBitsMask = enum(u32) {
 };
 
 const ProgramStatusRegister = packed struct(u32) {
-    const Self = @This();
-
     mode_bits: enum(u5) {
         old_user = 0,
         old_fiq = 1,
@@ -72,29 +70,34 @@ const ProgramStatusRegister = packed struct(u32) {
         signed = 1,
     },
 
-    fn getRegRaw(self: Self) u32 {
+    fn getRegRaw(self: ProgramStatusRegister) u32 {
         return @bitCast(self);
     }
 
-    fn setRegRaw(self: *Self, value: u32) void {
+    fn setRegRaw(self: *ProgramStatusRegister, value: u32) void {
         self.* = @bitCast(value);
     }
 
-    fn setBits(self: *Self, bits_mask: CPSRBitsMask) void {
+    fn setBits(self: *ProgramStatusRegister, bits_mask: CPSRBitsMask) void {
         self.setRegRaw(self.getRegRaw() | @intFromEnum(bits_mask));
     }
 
-    fn clearBits(self: *Self, bits_mask: CPSRBitsMask) void {
+    fn clearBits(self: *ProgramStatusRegister, bits_mask: CPSRBitsMask) void {
         self.setRegRaw(self.getRegRaw() & ~(@intFromEnum(bits_mask)));
     }
 
-    fn isBitSet(self: Self, bits_mask: CPSRBitsMask) bool {
+    fn isBitSet(self: ProgramStatusRegister, bits_mask: CPSRBitsMask) bool {
         return (self.getRegRaw() & @intFromEnum(bits_mask)) > 0;
     }
 
     comptime {
         std.debug.assert(@sizeOf(ProgramStatusRegister) == @sizeOf(u32));
     }
+};
+
+const PCIncrement = enum(u3) {
+    THUMB_INC = 2,
+    ARM_INC = 4,
 };
 
 const CPU = struct {
@@ -112,6 +115,18 @@ const CPU = struct {
             .spsr = std.mem.zeroes([7]ProgramStatusRegister),
             .pipeline = std.mem.zeroes([2]u32),
         };
+    }
+
+    fn getPC(self: CPU) u32 {
+        return self.gpr[15];
+    }
+
+    fn setPC(self: *CPU, value: u32) void {
+        self.gpr[15] = value;
+    }
+
+    fn incrementPC(self: *CPU, increment: PCIncrement) void {
+        self.gpr[15] +%= @intFromEnum(increment);
     }
 };
 
@@ -141,4 +156,18 @@ test "CPSR bits funcs" {
     cpsr.clearBits(CPSRBitsMask.T);
 
     try std.testing.expectEqual(cpsr.isBitSet(CPSRBitsMask.T), false);
+}
+
+test "PC register operations" {
+    var cpu = CPU.init();
+
+    try std.testing.expectEqual(cpu.getPC(), 0);
+
+    cpu.setPC(0xFFFFFFFF);
+
+    try std.testing.expectEqual(cpu.getPC(), 0xFFFFFFFF);
+
+    cpu.incrementPC(PCIncrement.THUMB_INC);
+
+    try std.testing.expectEqual(cpu.getPC(), 0x00000001);
 }
