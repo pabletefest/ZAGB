@@ -6,14 +6,13 @@ const Memory = @import("memory.zig").Memory;
 pub const GBA = struct {
     alloc: std.mem.Allocator,
     memory: *Memory,
-    cpu: *ARM7TDMI,
+    cpu: ARM7TDMI,
 
     pub fn init(allocator: std.mem.Allocator) !GBA {
         const memory = try allocator.create(Memory);
         errdefer allocator.destroy(memory);
 
-        const cpu = try allocator.create(ARM7TDMI);
-        errdefer allocator.destroy(cpu);
+        const cpu = ARM7TDMI.init(memory);
 
         return .{
             .alloc = allocator,
@@ -23,7 +22,6 @@ pub const GBA = struct {
     }
 
     pub fn deinit(self: *GBA) void {
-        self.alloc.destroy(self.memorry);
-        self.alloc.destroy(self.cpu);
+        self.alloc.destroy(self.memory);
     }
 };

@@ -1,4 +1,5 @@
 const std = @import("std");
+const Memory = @import("memory.zig").Memory;
 
 const CpuStateMode = enum(u1) {
     ARM = 0,
@@ -112,6 +113,8 @@ const PCIncrement = enum(u3) {
 };
 
 pub const CPU = struct {
+    memory: *Memory,
+
     gpr: [16]u32,
     banked_regs: [6][7]u32, // we bank regs 8-14 included, to simplify the process
     cpsr: ProgramStatusRegister,
@@ -122,8 +125,9 @@ pub const CPU = struct {
     const LR = 14;
     const PC = 15;
 
-    pub fn init() CPU {
+    pub fn init(memory: *Memory) CPU {
         var cpu = CPU{
+            .memory = memory,
             .gpr = std.mem.zeroes([16]u32),
             .banked_regs = std.mem.zeroes([6][7]u32),
             .cpsr = std.mem.zeroes(ProgramStatusRegister),
@@ -197,7 +201,10 @@ pub const CPU = struct {
 };
 
 test "CPU init" {
-    var cpu = CPU.init();
+    const memory = try std.testing.allocator.create(Memory);
+    defer std.testing.allocator.destroy(memory);
+
+    var cpu = CPU.init(memory);
 
     const cpsr_init: u6 = 19 | (0 << 5); // Supervisor and ARM modes
 
@@ -227,7 +234,10 @@ test "CPSR bits funcs" {
 }
 
 test "PC register operations" {
-    var cpu = CPU.init();
+    const memory = try std.testing.allocator.create(Memory);
+    defer std.testing.allocator.destroy(memory);
+
+    var cpu = CPU.init(memory);
 
     try std.testing.expectEqual(cpu.getPC(), 0);
 
@@ -241,7 +251,10 @@ test "PC register operations" {
 }
 
 test "Enter operation mode" {
-    var cpu = CPU.init();
+    const memory = try std.testing.allocator.create(Memory);
+    defer std.testing.allocator.destroy(memory);
+
+    var cpu = CPU.init(memory);
 
     cpu.enterOperationMode(OperationModes.FIQ);
 
