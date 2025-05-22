@@ -111,7 +111,7 @@ const PCIncrement = enum(u3) {
     ARM_INC = 4,
 };
 
-const CPU = struct {
+pub const CPU = struct {
     gpr: [16]u32,
     banked_regs: [6][7]u32, // we bank regs 8-14 included, to simplify the process
     cpsr: ProgramStatusRegister,
@@ -137,16 +137,17 @@ const CPU = struct {
         return cpu;
     }
 
-    fn read(comptime T: type, u32 address) T {
-        
+    fn read(comptime T: type, address: u32) T {
+        _ = address;
     }
 
-    fn write(comptime T: type, u32 address, T value) {
-    
+    fn write(comptime T: type, address: u32, value: T) void {
+        _ = address;
+        _ = value;
     }
 
     fn flushPipeline(self: *CPU) void {
-           
+        _ = self;
     }
 
     fn getPC(self: CPU) u32 {
