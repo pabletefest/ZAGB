@@ -137,6 +137,18 @@ const CPU = struct {
         return cpu;
     }
 
+    fn read(comptime T: type, u32 address) T {
+        
+    }
+
+    fn write(comptime T: type, u32 address, T value) {
+    
+    }
+
+    fn flushPipeline(self: *CPU) void {
+           
+    }
+
     fn getPC(self: CPU) u32 {
         return self.gpr[PC];
     }
