@@ -18,7 +18,7 @@ pub const Memory = struct {
         return .{};
     }
 
-    pub fn read(comptime T: type, self: *const Memory, address: u32) MemOpError!type {
+    pub fn read(self: *const Memory, comptime T: type, address: u32) MemOpError!type {
         const word_size = @sizeOf(T);
         var mapped_addr = address & 0x0FFFFFFF; // upper 4 bits unused
 
@@ -59,7 +59,7 @@ pub const Memory = struct {
         }
     }
 
-    pub fn write(comptime T: type, self: *Memory, address: u32, value: T) MemOpError!void {
+    pub fn write(self: *Memory, comptime T: type, address: u32, value: T) MemOpError!void {
         const word_size = @sizeOf(T);
         const mapped_addr = address & 0x0FFFFFFF; // upper 4 bits unused
 

@@ -141,17 +141,31 @@ pub const CPU = struct {
         return cpu;
     }
 
-    fn read(comptime T: type, address: u32) T {
+    fn read(self: *const CPU, comptime T: type, address: u32) T {
+        _ = self;
         _ = address;
+
+        return 0;
     }
 
-    fn write(comptime T: type, address: u32, value: T) void {
+    fn write(self: *CPU, comptime T: type, address: u32, value: T) void {
+        _ = self;
         _ = address;
         _ = value;
     }
 
     fn flushPipeline(self: *CPU) void {
-        _ = self;
+        if (self.cpsr.state_bit == .ARM) {
+            self.pipeline[0] = self.read(u32, self.getPC());
+            self.incrementPC(.ARM_INC);
+            self.pipeline[1] = self.read(u32, self.getPC());
+            self.incrementPC(.ARM_INC);
+        } else {
+            self.pipeline[0] = self.read(u16, self.getPC());
+            self.incrementPC(.THUMB_INC);
+            self.pipeline[1] = self.read(u16, self.getPC());
+            self.incrementPC(.THUMB_INC);
+        }
     }
 
     fn getPC(self: CPU) u32 {
@@ -259,4 +273,19 @@ test "Enter operation mode" {
     cpu.enterOperationMode(OperationModes.FIQ);
 
     try std.testing.expectEqual(OperationModes.FIQ, cpu.cpsr.mode_bits);
+}
+
+test "Flush pipeline" {
+    const memory = try std.testing.allocator.create(Memory);
+    defer std.testing.allocator.destroy(memory);
+
+    var cpu = CPU.init(memory);
+
+    cpu.pipeline[0] = 0xFFFFFFFF;
+    cpu.pipeline[1] = 0xFFFFFFFF;
+
+    cpu.flushPipeline();
+
+    try std.testing.expectEqual(cpu.pipeline[0], 0);
+    try std.testing.expectEqual(cpu.pipeline[1], 0);
 }
